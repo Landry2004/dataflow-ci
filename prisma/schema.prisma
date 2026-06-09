@@ -1,0 +1,145 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Organisation {
+  id        Int      @id @default(autoincrement())
+  nom       String
+  email     String   @unique
+  createdAt DateTime @default(now())
+
+  users     User[]
+  sources   Source[]
+  webhooks  Webhook[]
+  fichiers  Fichier[]
+}
+
+model User {
+  id             Int      @id @default(autoincrement())
+  nom            String
+  email          String   @unique
+  motDePasse     String
+  role           String   @default("client")
+  organisationId Int
+  createdAt      DateTime @default(now())
+
+  organisation   Organisation   @relation(fields: [organisationId], references: [id])
+  notifications  Notification[]
+}
+
+model Source {
+  id             Int      @id @default(autoincrement())
+  sourceId       String   @unique
+  nom            String
+  description    String?
+  owner          String?
+  version        Int      @default(1)
+  frequence      String?
+  formatFichier  String   @default("csv")
+  separateur     String   @default(",")
+  encodage       String   @default("utf-8")
+  hasHeader      Boolean  @default(true)
+  organisationId Int
+  createdAt      DateTime @default(now())
+
+  organisation       Organisation        @relation(fields: [organisationId], references: [id])
+  colonnes           SchemaColonne[]
+  contraintesLignes  ContrainteLigne[]
+  fichiers           Fichier[]
+}
+
+model SchemaColonne {
+  id                  Int      @id @default(autoincrement())
+  nom                 String
+  type                String
+  obligatoire         Boolean  @default(true)
+  formatDate          String?
+  valeurMin           Float?
+  valeurMax           Float?
+  longueurMin         Int?
+  longueurMax         Int?
+  valeursAutorisees   String[]
+  formatRegex         String?
+  pasDansLeFutur      Boolean  @default(false)
+  description         String?
+  sourceId            Int
+
+  source  Source  @relation(fields: [sourceId], references: [id])
+}
+
+model ContrainteLigne {
+  id          Int    @id @default(autoincrement())
+  nom         String
+  description String?
+  colonnes    String[]
+  type        String
+  sourceId    Int
+
+  source  Source  @relation(fields: [sourceId], references: [id])
+}
+
+model Fichier {
+  id              Int      @id @default(autoincrement())
+  nom             String
+  taille          Float?
+  cheminStockage  String?
+  statut          String   @default("pending")
+  sourceId        Int
+  organisationId  Int
+  uploadePar      Int
+  createdAt       DateTime @default(now())
+
+  source        Source        @relation(fields: [sourceId], references: [id])
+  organisation  Organisation  @relation(fields: [organisationId], references: [id])
+  rapport       Rapport?
+  notifications Notification[]
+}
+
+model Rapport {
+  id              Int      @id @default(autoincrement())
+  totalLignes     Int      @default(0)
+  lignesValides   Int      @default(0)
+  lignesInvalides Int      @default(0)
+  fichierId       Int      @unique
+  createdAt       DateTime @default(now())
+
+  fichier  Fichier  @relation(fields: [fichierId], references: [id])
+  erreurs  Erreur[]
+}
+
+model Erreur {
+  id           Int    @id @default(autoincrement())
+  numeroLigne  Int
+  colonne      String
+  valeurRecue  String?
+  raison       String
+  rapportId    Int
+
+  rapport  Rapport  @relation(fields: [rapportId], references: [id])
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  message   String
+  lue       Boolean  @default(false)
+  userId    Int
+  fichierId Int?
+  createdAt DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id])
+  fichier  Fichier? @relation(fields: [fichierId], references: [id])
+}
+
+model Webhook {
+  id             Int      @id @default(autoincrement())
+  url            String
+  actif          Boolean  @default(true)
+  organisationId Int
+  createdAt      DateTime @default(now())
+
+  organisation  Organisation  @relation(fields: [organisationId], references: [id])
+}
