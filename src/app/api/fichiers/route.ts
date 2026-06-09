@@ -74,9 +74,16 @@ async function validerEnArrierePlan(
       where: { id: fichierId },
       data: { statut: "processing" },
     });
+// Lire le contenu du fichier
+const contenu = await file.text();
+console.log("Séparateur utilisé:", source.separateur);
+console.log("Premières lignes:", contenu.substring(0, 200));
 
-    // Lire le contenu du fichier
-    const contenu = await file.text();
+// Sauvegarder le contenu
+await prisma.fichier.update({
+  where: { id: fichierId },
+  data: { contenu },
+});
 
     // Valider le fichier
     const resultat = validerFichierCSV(contenu, source.colonnes, source.separateur);

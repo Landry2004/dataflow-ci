@@ -87,6 +87,7 @@ model Fichier {
   nom             String
   taille          Float?
   cheminStockage  String?
+  contenu         String? 
   statut          String   @default("pending")
   sourceId        Int
   organisationId  Int

@@ -46,29 +46,30 @@ function validerValeur(
 
   const valeurStr = String(valeur).trim();
 
-  switch (regle.type) {
-   case "integer": {
-  const num = Number(valeurStr);
-  if (!Number.isInteger(num)) {
-    return { valide: false, raison: `Valeur "${valeurStr}" n'est pas un entier` };
-  }
-  if (regle.valeurMin !== undefined && regle.valeurMin !== null && num < regle.valeurMin) {
-    return { valide: false, raison: `Valeur ${num} inférieure au minimum ${regle.valeurMin}` };
-  }
-  if (regle.valeurMax !== undefined && regle.valeurMax !== null && num > regle.valeurMax) {
-    return { valide: false, raison: `Valeur ${num} supérieure au maximum ${regle.valeurMax}` };
-  }
-  break;
-}
+switch (regle.type) {
+    case "integer": {
+      const num = Number(valeurStr);
+      if (!Number.isInteger(num)) {
+        return { valide: false, raison: `Valeur "${valeurStr}" n'est pas un entier` };
+      }
+      if (regle.valeurMin !== undefined && regle.valeurMin !== null && num < regle.valeurMin) {
+        return { valide: false, raison: `Valeur ${num} inférieure au minimum ${regle.valeurMin}` };
+      }
+      if (regle.valeurMax !== undefined && regle.valeurMax !== null && num > regle.valeurMax) {
+        return { valide: false, raison: `Valeur ${num} supérieure au maximum ${regle.valeurMax}` };
+      }
+      break;
+    }
+
     case "float": {
       const num = Number(valeurStr);
       if (isNaN(num)) {
         return { valide: false, raison: `Valeur "${valeurStr}" n'est pas un nombre` };
       }
-      if (regle.valeurMin !== undefined && num < regle.valeurMin) {
+      if (regle.valeurMin !== undefined && regle.valeurMin !== null && num < regle.valeurMin) {
         return { valide: false, raison: `Valeur ${num} inférieure au minimum ${regle.valeurMin}` };
       }
-      if (regle.valeurMax !== undefined && num > regle.valeurMax) {
+      if (regle.valeurMax !== undefined && regle.valeurMax !== null && num > regle.valeurMax) {
         return { valide: false, raison: `Valeur ${num} supérieure au maximum ${regle.valeurMax}` };
       }
       break;
@@ -97,7 +98,7 @@ function validerValeur(
     }
 
     case "enum": {
-      if (regle.valeursAutorisees && !regle.valeursAutorisees.includes(valeurStr)) {
+      if (regle.valeursAutorisees && regle.valeursAutorisees.length > 0 && !regle.valeursAutorisees.includes(valeurStr)) {
         return {
           valide: false,
           raison: `Valeur "${valeurStr}" non autorisée. Valeurs acceptées: ${regle.valeursAutorisees.join(", ")}`,
@@ -106,7 +107,8 @@ function validerValeur(
       break;
     }
 
-    case "string": {
+    case "string":
+    default: {
       if (regle.longueurMin && valeurStr.length < regle.longueurMin) {
         return { valide: false, raison: `Longueur ${valeurStr.length} inférieure au minimum ${regle.longueurMin}` };
       }
@@ -122,7 +124,6 @@ function validerValeur(
       break;
     }
   }
-
   return { valide: true };
 }
 
