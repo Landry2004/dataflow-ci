@@ -324,12 +324,14 @@ export default function SourceDetailPage() {
                 Historique du schéma
               </h2>
               <div className="flex items-center gap-2">
-                <span
-                  className="text-xs px-2 py-0.5 rounded-full"
-                  style={{ backgroundColor: "#EFF6FF", color: "#2563EB" }}
-                >
-                  v{source.version}
-                </span>
+              {versions.length > 0 && (
+  <span
+    className="text-xs px-2 py-0.5 rounded-full"
+    style={{ backgroundColor: "#EFF6FF", color: "#2563EB" }}
+  >
+    v{versions.find((v) => v.actif)?.version || versions[0]?.version}
+  </span>
+)}
                 <ChevronRight
                   size={16}
                   className="text-gray-400 transition-transform"

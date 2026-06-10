@@ -42,14 +42,38 @@ export default function EditSchemaPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const [prochaineVersion, setProchaineVersion] = useState(1);
 
   useEffect(() => {
     fetch(`/api/sources/${params.id}`)
       .then((res) => res.json())
       .then((data) => {
         setSource(data);
-        setColonnes(data.colonnes || []);
         setLoading(false);
+      });
+
+    fetch(`/api/sources/${params.id}/schema`)
+      .then((res) => res.json())
+      .then((versions) => {
+        if (Array.isArray(versions) && versions.length > 0) {
+          const versionActive = versions.find((v: any) => v.actif) || versions[0];
+          if (versionActive.colonnes?.length > 0) {
+            setColonnes(versionActive.colonnes);
+          } else {
+            fetch(`/api/sources/${params.id}`)
+              .then((res) => res.json())
+              .then((data) => setColonnes(data.colonnes || []));
+          }
+          // Calculer la prochaine version
+          const maxVersion = Math.max(...versions.map((v: any) => v.version));
+          setProchaineVersion(maxVersion + 1);
+        } else {
+          // Pas de versions → prochaine version = 1
+          fetch(`/api/sources/${params.id}`)
+            .then((res) => res.json())
+            .then((data) => setColonnes(data.colonnes || []));
+          setProchaineVersion(1);
+        }
       });
   }, [params.id]);
 
@@ -119,7 +143,7 @@ export default function EditSchemaPage() {
                 className="text-xs px-2 py-1 rounded-full"
                 style={{ backgroundColor: "#FFF7ED", color: "#EA580C" }}
               >
-                Créera la version {(source?.version || 0) + 1}
+                Créera la version {prochaineVersion}
               </span>
             </div>
             <p className="text-sm text-gray-500">

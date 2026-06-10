@@ -1,0 +1,9 @@
+DELETE FROM "Erreur";
+DELETE FROM "Rapport";
+DELETE FROM "Fichier";
+DELETE FROM "Notification";
+DELETE FROM "Webhook";
+DELETE FROM "ContrainteLigne";
+DELETE FROM "SchemaColonne";
+DELETE FROM "SchemaVersion";
+DELETE FROM "Source";
