@@ -48,9 +48,9 @@ export async function GET() {
     });
 
     // Taux de succès
-    const succes = fichiersParStatut.find((f) => f.statut === "success")?._count.statut || 0;
-    const partial = fichiersParStatut.find((f) => f.statut === "partial")?._count.statut || 0;
-    const failed = fichiersParStatut.find((f) => f.statut === "failed")?._count.statut || 0;
+    const succes = fichiersParStatut.find((f: any) => f.statut === "success")?._count.statut || 0;
+const partial = fichiersParStatut.find((f: any) => f.statut === "partial")?._count.statut || 0;
+const failed = fichiersParStatut.find((f: any) => f.statut === "failed")?._count.statut || 0;
     const tauxSucces = totalFichiers > 0 ? Math.round(((succes + partial) / totalFichiers) * 100) : 0;
 
     return NextResponse.json({
