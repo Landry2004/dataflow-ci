@@ -29,12 +29,14 @@ export async function POST(request: Request) {
       );
     }
 
-    // Récupérer la source et son schéma
     const source = await prisma.source.findUnique({
-      where: { id: Number(sourceId) },
-      include: { colonnes: true },
-    });
-
+  where: { id: Number(sourceId) },
+  include: {
+    colonnes: {
+      where: { schemaVersionId: null }
+    }
+  },
+});
     if (!source) {
       return NextResponse.json({ error: "Source introuvable" }, { status: 404 });
     }
@@ -69,22 +71,41 @@ async function validerEnArrierePlan(
   source: any
 ) {
   try {
-// Lire le contenu du fichier
-const contenuBrut = await file.text();
-console.log("Séparateur utilisé:", source.separateur);
-console.log("Premières lignes:", contenuBrut.substring(0, 200));
+    // Mettre le statut en "processing"
+    await prisma.fichier.update({
+      where: { id: fichierId },
+      data: { statut: "processing" },
+    });
 
-// Nettoyer le contenu — supprimer les caractères nuls
-const contenu = contenuBrut.replace(/\0/g, "");
+    // Lire le contenu du fichier
+    const contenuBrut = await file.text();
+    console.log("Séparateur utilisé:", source.separateur);
+    console.log("Premières lignes:", contenuBrut.substring(0, 200));
 
-// Sauvegarder le contenu
-await prisma.fichier.update({
-  where: { id: fichierId },
-  data: { contenu },
-});
+    // Nettoyer le contenu
+    const contenu = contenuBrut.replace(/\0/g, "");
 
-// Valider le fichier
-const resultat = validerFichierCSV(contenu, source.colonnes, source.separateur);
+    // Sauvegarder le contenu
+    await prisma.fichier.update({
+      where: { id: fichierId },
+      data: { contenu },
+    });
+
+    // Récupérer la version active du schéma
+    const versionActive = await prisma.schemaVersion.findFirst({
+      where: { sourceId: source.id, actif: true },
+      include: { colonnes: true },
+      orderBy: { version: "desc" },
+    });
+
+    // Utiliser les colonnes de la version active ou les colonnes originales
+    const colonnesActives = versionActive?.colonnes?.length > 0
+      ? versionActive.colonnes
+      : source.colonnes;
+
+    // Valider le fichier
+    const resultat = validerFichierCSV(contenu, colonnesActives, source.separateur);
+
     // Déterminer le statut final
     let statut = "success";
     if (resultat.lignesInvalides > 0 && resultat.lignesValides === 0) {
@@ -116,13 +137,17 @@ const resultat = validerFichierCSV(contenu, source.colonnes, source.separateur);
       });
     }
 
-    // Mettre à jour le statut du fichier
+    // Mettre à jour le statut et lier à la version du schéma
     await prisma.fichier.update({
       where: { id: fichierId },
-      data: { statut },
+      data: {
+        statut,
+        schemaVersionId: versionActive?.id || null,
+      },
     });
 
   } catch (error) {
+    console.error("Erreur validation:", error);
     await prisma.fichier.update({
       where: { id: fichierId },
       data: { statut: "failed" },

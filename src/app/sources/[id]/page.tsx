@@ -11,6 +11,7 @@ import {
   Clock,
   ChevronRight,
   FileX,
+  Pencil,
 } from "lucide-react";
 
 interface Source {
@@ -18,6 +19,7 @@ interface Source {
   nom: string;
   description: string;
   separateur: string;
+  version: number;
   colonnes: any[];
 }
 
@@ -32,6 +34,14 @@ interface Fichier {
     lignesValides: number;
     lignesInvalides: number;
   };
+}
+
+interface SchemaVersion {
+  id: number;
+  version: number;
+  actif: boolean;
+  createdAt: string;
+  colonnes: any[];
 }
 
 const getStatutBadge = (statut: string) => {
@@ -73,10 +83,12 @@ export default function SourceDetailPage() {
   const params = useParams();
   const [source, setSource] = useState<Source | null>(null);
   const [fichiers, setFichiers] = useState<Fichier[]>([]);
+  const [versions, setVersions] = useState<SchemaVersion[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
   const [isDragging, setIsDragging] = useState(false);
+  const [showVersions, setShowVersions] = useState(false);
 
   useEffect(() => {
     fetch(`/api/sources/${params.id}`)
@@ -88,12 +100,16 @@ export default function SourceDetailPage() {
       .catch(() => setLoading(false));
 
     fetchFichiers();
+
+    fetch(`/api/sources/${params.id}/schema`)
+      .then((res) => res.json())
+      .then((data) => setVersions(Array.isArray(data) ? data : []));
   }, [params.id]);
 
   const fetchFichiers = () => {
     fetch(`/api/fichiers?sourceId=${params.id}`)
       .then((res) => res.json())
-      .then((data) => setFichiers(data));
+      .then((data) => setFichiers(Array.isArray(data) ? data : []));
   };
 
   const handleUpload = async (file: File) => {
@@ -186,6 +202,14 @@ export default function SourceDetailPage() {
                 >
                   {source.colonnes?.length || 0} colonnes
                 </span>
+                <Link
+                  href={`/sources/${params.id}/edit`}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all"
+                  style={{ borderColor: "#E2E8F0", color: "#374151" }}
+                >
+                  <Pencil size={12} />
+                  Modifier le schéma
+                </Link>
               </div>
             </div>
           </div>
@@ -289,6 +313,68 @@ export default function SourceDetailPage() {
               </div>
             )}
           </div>
+
+          {/* Historique des versions */}
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm mt-6">
+            <div
+              className="flex items-center justify-between px-6 py-4 cursor-pointer"
+              onClick={() => setShowVersions(!showVersions)}
+            >
+              <h2 className="text-sm font-semibold text-gray-900">
+                Historique du schéma
+              </h2>
+              <div className="flex items-center gap-2">
+                <span
+                  className="text-xs px-2 py-0.5 rounded-full"
+                  style={{ backgroundColor: "#EFF6FF", color: "#2563EB" }}
+                >
+                  v{source.version}
+                </span>
+                <ChevronRight
+                  size={16}
+                  className="text-gray-400 transition-transform"
+                  style={{ transform: showVersions ? "rotate(90deg)" : "rotate(0deg)" }}
+                />
+              </div>
+            </div>
+
+            {showVersions && (
+              <div className="border-t border-gray-100">
+                {versions.length === 0 ? (
+                  <div className="px-6 py-4 text-sm text-gray-400">
+                    Aucune version enregistrée — les versions sont créées quand vous modifiez le schéma.
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-50">
+                    {versions.map((v) => (
+                      <div key={v.id} className="px-6 py-4 flex justify-between items-center">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-gray-900">
+                              Version {v.version}
+                            </span>
+                            {v.actif && (
+                              <span
+                                className="text-xs px-2 py-0.5 rounded-full"
+                                style={{ backgroundColor: "#F0FDF4", color: "#16A34A" }}
+                              >
+                                Actuelle
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            {v.colonnes.length} colonnes · Créée le{" "}
+                            {new Date(v.createdAt).toLocaleDateString("fr-FR")}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
         </div>
       </div>
     </AppLayout>

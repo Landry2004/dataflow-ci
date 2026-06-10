@@ -34,6 +34,7 @@ interface Fichier {
   createdAt: string;
   source: { nom: string; id: number };
   rapport: Rapport;
+  schemaVersion?: { version: number; createdAt: string };
 }
 
 export default function RapportPage() {
@@ -90,6 +91,33 @@ export default function RapportPage() {
             <span className="text-gray-900 font-medium">{fichier.nom}</span>
           </div>
 
+          {/* Info validation */}
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 mb-6 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-900">{fichier.nom}</p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Uploadé le {new Date(fichier.createdAt).toLocaleDateString("fr-FR")}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {fichier.schemaVersion ? (
+                <span
+                  className="text-xs px-2 py-1 rounded-lg"
+                  style={{ backgroundColor: "#EFF6FF", color: "#2563EB" }}
+                >
+                  Validé avec schéma v{fichier.schemaVersion.version}
+                </span>
+              ) : (
+                <span
+                  className="text-xs px-2 py-1 rounded-lg"
+                  style={{ backgroundColor: "#F1F5F9", color: "#64748B" }}
+                >
+                  Schéma original
+                </span>
+              )}
+            </div>
+          </div>
+
           {/* Stats */}
           <div className="grid grid-cols-3 gap-5 mb-6">
             <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
@@ -118,38 +146,36 @@ export default function RapportPage() {
             </div>
           </div>
 
-  {/* Export */}
-{fichier.rapport?.lignesValides > 0 && (
-  <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 mb-6 flex justify-between items-center">
-    <div className="flex items-center gap-3">
-      <div
-        className="w-10 h-10 rounded-lg flex items-center justify-center"
-        style={{ backgroundColor: "#F0FDF4" }}
-      >
-        <CheckCircle size={20} style={{ color: "#16A34A" }} />
-      </div>
-
-      <div>
-        <p className="text-sm font-medium text-gray-900">
-          Exporter les lignes valides
-        </p>
-        <p className="text-xs text-gray-400">
-          {fichier.rapport.lignesValides} lignes prêtes à être téléchargées
-        </p>
-      </div>
-    </div>
-
-    <a
-      href={`/api/fichiers/${id}/export`}
-      className="flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-medium transition-all"
-      style={{ backgroundColor: "#16A34A" }}
-      download
-    >
-      <Download size={15} />
-      Télécharger CSV
-    </a>
-  </div>
-)}
+          {/* Export */}
+          {fichier.rapport?.lignesValides > 0 && (
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 mb-6 flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-10 h-10 rounded-lg flex items-center justify-center"
+                  style={{ backgroundColor: "#F0FDF4" }}
+                >
+                  <CheckCircle size={20} style={{ color: "#16A34A" }} />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">
+                    Exporter les lignes valides
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    {fichier.rapport.lignesValides} lignes prêtes à être téléchargées
+                  </p>
+                </div>
+              </div>
+              <a
+                href={`/api/fichiers/${id}/export`}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-medium transition-all"
+                style={{ backgroundColor: "#16A34A" }}
+                download
+              >
+                <Download size={15} />
+                Télécharger CSV
+              </a>
+            </div>
+          )}
 
           {/* Erreurs */}
           {fichier.rapport?.erreurs?.length > 0 && (
@@ -223,6 +249,7 @@ export default function RapportPage() {
               </p>
             </div>
           )}
+
         </div>
       </div>
     </AppLayout>

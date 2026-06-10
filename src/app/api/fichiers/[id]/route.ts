@@ -25,9 +25,9 @@ export async function GET(
             },
           },
         },
+        schemaVersion: true,
       },
     });
-
     if (!fichier) {
       return NextResponse.json({ error: "Fichier introuvable" }, { status: 404 });
     }

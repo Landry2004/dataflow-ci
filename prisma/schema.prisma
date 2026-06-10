@@ -46,29 +46,33 @@ model Source {
   organisationId Int
   createdAt      DateTime @default(now())
 
-  organisation       Organisation        @relation(fields: [organisationId], references: [id])
-  colonnes           SchemaColonne[]
-  contraintesLignes  ContrainteLigne[]
-  fichiers           Fichier[]
+  organisation      Organisation      @relation(fields: [organisationId], references: [id])
+  colonnes          SchemaColonne[]
+  contraintesLignes ContrainteLigne[]
+  fichiers          Fichier[]
+  schemaVersions    SchemaVersion[]
 }
 
-model SchemaColonne {
-  id                  Int      @id @default(autoincrement())
-  nom                 String
-  type                String
-  obligatoire         Boolean  @default(true)
-  formatDate          String?
-  valeurMin           Float?
-  valeurMax           Float?
-  longueurMin         Int?
-  longueurMax         Int?
-  valeursAutorisees   String[]
-  formatRegex         String?
-  pasDansLeFutur      Boolean  @default(false)
-  description         String?
-  sourceId            Int
 
-  source  Source  @relation(fields: [sourceId], references: [id])
+model SchemaColonne {
+  id                Int      @id @default(autoincrement())
+  nom               String
+  type              String
+  obligatoire       Boolean  @default(true)
+  formatDate        String?
+  valeurMin         Float?
+  valeurMax         Float?
+  longueurMin       Int?
+  longueurMax       Int?
+  valeursAutorisees String[]
+  formatRegex       String?
+  pasDansLeFutur    Boolean  @default(false)
+  description       String?
+  sourceId          Int
+  schemaVersionId   Int?
+
+  source        Source         @relation(fields: [sourceId], references: [id])
+  schemaVersion SchemaVersion? @relation(fields: [schemaVersionId], references: [id])
 }
 
 model ContrainteLigne {
@@ -87,17 +91,19 @@ model Fichier {
   nom             String
   taille          Float?
   cheminStockage  String?
-  contenu         String? 
+  contenu         String?
   statut          String   @default("pending")
   sourceId        Int
   organisationId  Int
   uploadePar      Int
+  schemaVersionId Int?
   createdAt       DateTime @default(now())
 
-  source        Source        @relation(fields: [sourceId], references: [id])
-  organisation  Organisation  @relation(fields: [organisationId], references: [id])
+  source        Source         @relation(fields: [sourceId], references: [id])
+  organisation  Organisation   @relation(fields: [organisationId], references: [id])
   rapport       Rapport?
   notifications Notification[]
+  schemaVersion SchemaVersion? @relation(fields: [schemaVersionId], references: [id])
 }
 
 model Rapport {
@@ -143,4 +149,16 @@ model Webhook {
   createdAt      DateTime @default(now())
 
   organisation  Organisation  @relation(fields: [organisationId], references: [id])
+}
+
+model SchemaVersion {
+  id        Int      @id @default(autoincrement())
+  version   Int      @default(1)
+  actif     Boolean  @default(true)
+  sourceId  Int
+  createdAt DateTime @default(now())
+
+  source   Source          @relation(fields: [sourceId], references: [id])
+  colonnes SchemaColonne[]
+  fichiers Fichier[]
 }

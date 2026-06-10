@@ -14,10 +14,14 @@ export async function GET(
 
         const { id } = await params;
 
-        const source = await prisma.source.findUnique({
-            where: { id: Number(id) },
-            include: { colonnes: true },
-        });
+       const source = await prisma.source.findUnique({
+  where: { id: Number(id) },
+  include: {
+    colonnes: {
+      where: { schemaVersionId: null }
+    }
+  },
+});
 
         if (!source) {
             return NextResponse.json({ error: "Source introuvable" }, { status: 404 });
