@@ -4,6 +4,14 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import AppLayout from "@/components/layout/AppLayout";
+import {
+  Upload,
+  FileCheck,
+  AlertCircle,
+  Clock,
+  ChevronRight,
+  FileX,
+} from "lucide-react";
 
 interface Source {
   id: number;
@@ -26,6 +34,41 @@ interface Fichier {
   };
 }
 
+const getStatutBadge = (statut: string) => {
+  switch (statut) {
+    case "success":
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: "#F0FDF4", color: "#16A34A" }}>
+          <FileCheck size={11} /> Succès
+        </span>
+      );
+    case "partial":
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: "#FFFBEB", color: "#D97706" }}>
+          <AlertCircle size={11} /> Partiel
+        </span>
+      );
+    case "failed":
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: "#FEF2F2", color: "#DC2626" }}>
+          <FileX size={11} /> Échec
+        </span>
+      );
+    case "processing":
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: "#EFF6FF", color: "#2563EB" }}>
+          <Clock size={11} /> En cours
+        </span>
+      );
+    default:
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: "#F8FAFC", color: "#64748B" }}>
+          <Clock size={11} /> En attente
+        </span>
+      );
+  }
+};
+
 export default function SourceDetailPage() {
   const params = useParams();
   const [source, setSource] = useState<Source | null>(null);
@@ -33,6 +76,7 @@ export default function SourceDetailPage() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     fetch(`/api/sources/${params.id}`)
@@ -52,8 +96,7 @@ export default function SourceDetailPage() {
       .then((data) => setFichiers(data));
   };
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleUpload = async (file: File) => {
     if (!file) return;
 
     setUploading(true);
@@ -71,7 +114,7 @@ export default function SourceDetailPage() {
     const data = await res.json();
 
     if (res.ok) {
-      setMessage("Fichier reçu, validation en cours...");
+      setMessage("Fichier reçu — validation en cours...");
       const interval = setInterval(() => {
         fetchFichiers();
       }, 2000);
@@ -83,99 +126,162 @@ export default function SourceDetailPage() {
     setUploading(false);
   };
 
-  const getStatutBadge = (statut: string) => {
-    switch (statut) {
-      case "success":
-        return <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">✅ Succès</span>;
-      case "partial":
-        return <span className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-xs">⚠️ Partiel</span>;
-      case "failed":
-        return <span className="bg-red-100 text-red-700 px-2 py-1 rounded text-xs">❌ Échec</span>;
-      case "processing":
-        return <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">🔄 En cours</span>;
-      default:
-        return <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">⏳ En attente</span>;
-    }
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleUpload(file);
   };
 
-  if (loading) return <AppLayout><div className="p-8">Chargement...</div></AppLayout>;
-  if (!source) return <AppLayout><div className="p-8">Source introuvable</div></AppLayout>;
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleUpload(file);
+  };
+
+  if (loading)
+    return (
+      <AppLayout>
+        <div className="p-8 text-gray-400 text-sm">Chargement...</div>
+      </AppLayout>
+    );
+
+  if (!source)
+    return (
+      <AppLayout>
+        <div className="p-8 text-gray-400 text-sm">Source introuvable</div>
+      </AppLayout>
+    );
 
   return (
     <AppLayout>
-      <div className="p-8">
+      <div className="p-8" style={{ backgroundColor: "#F8FAFC", minHeight: "100vh" }}>
         <div className="max-w-5xl mx-auto">
-          <div className="flex items-center gap-2 mb-6">
-            <Link href="/sources" className="text-gray-500 hover:text-gray-700">
+
+          {/* Breadcrumb */}
+          <div className="flex items-center gap-2 mb-6 text-sm">
+            <Link href="/sources" className="text-gray-400 hover:text-gray-600 transition-colors">
               Sources
             </Link>
-            <span className="text-gray-400">→</span>
-            <span className="text-gray-900">{source.nom}</span>
+            <ChevronRight size={14} className="text-gray-300" />
+            <span className="text-gray-900 font-medium">{source.nom}</span>
           </div>
 
-          <div className="bg-white rounded-lg border p-6 mb-6">
-            <h1 className="text-2xl font-bold text-gray-900 mb-1">{source.nom}</h1>
-            <p className="text-gray-500 mb-4">{source.description}</p>
-            <p className="text-sm text-gray-400">
-              Séparateur : <code className="bg-gray-100 px-1 rounded">{source.separateur}</code> ·{" "}
-              {source.colonnes?.length || 0} colonnes
-            </p>
+          {/* Info source */}
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 mb-6">
+            <div className="flex justify-between items-start">
+              <div>
+                <h1 className="text-xl font-bold text-gray-900 mb-1">{source.nom}</h1>
+                <p className="text-sm text-gray-500">{source.description}</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <span
+                  className="text-xs px-3 py-1.5 rounded-lg font-mono"
+                  style={{ backgroundColor: "#F1F5F9", color: "#64748B" }}
+                >
+                  séparateur : {source.separateur === "," ? "virgule (,)" : "point-virgule (;)"}
+                </span>
+                <span
+                  className="text-xs px-3 py-1.5 rounded-lg"
+                  style={{ backgroundColor: "#EFF6FF", color: "#2563EB" }}
+                >
+                  {source.colonnes?.length || 0} colonnes
+                </span>
+              </div>
+            </div>
           </div>
 
-          <div className="bg-white rounded-lg border p-6 mb-6">
-            <h2 className="text-lg font-semibold mb-4">Uploader un fichier</h2>
-            <label className="block w-full border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-blue-400 transition">
+          {/* Zone upload */}
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 mb-6">
+            <h2 className="text-sm font-semibold text-gray-900 mb-4">Uploader un fichier</h2>
+            <label
+              className="block w-full border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-all"
+              style={{
+                borderColor: isDragging ? "#2563EB" : "#E2E8F0",
+                backgroundColor: isDragging ? "#EFF6FF" : "#FAFAFA",
+              }}
+              onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={handleDrop}
+            >
               <input
                 type="file"
                 accept=".csv,.xlsx,.xls"
-                onChange={handleUpload}
+                onChange={handleFileInput}
                 className="hidden"
                 disabled={uploading}
               />
-              <p className="text-gray-500">
-                {uploading
-                  ? "Upload en cours..."
-                  : "Cliquez ou glissez un fichier CSV ou Excel (max 10MB)"}
+              <div
+                className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3"
+                style={{ backgroundColor: "#EFF6FF" }}
+              >
+                <Upload size={22} style={{ color: "#2563EB" }} />
+              </div>
+              <p className="text-sm font-medium text-gray-700 mb-1">
+                {uploading ? "Upload en cours..." : "Glissez votre fichier ici"}
+              </p>
+              <p className="text-xs text-gray-400">
+                CSV ou Excel · Maximum 10 MB
               </p>
             </label>
             {message && (
-              <p className="mt-3 text-sm text-blue-600">{message}</p>
+              <p
+                className="mt-3 text-sm px-4 py-2 rounded-lg"
+                style={{ backgroundColor: "#EFF6FF", color: "#2563EB" }}
+              >
+                {message}
+              </p>
             )}
           </div>
 
-          <div className="bg-white rounded-lg border p-6">
-            <h2 className="text-lg font-semibold mb-4">Fichiers uploadés</h2>
+          {/* Liste fichiers */}
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
+            <div className="px-6 py-4 border-b border-gray-100">
+              <h2 className="text-sm font-semibold text-gray-900">
+                Fichiers uploadés
+              </h2>
+            </div>
+
             {fichiers.length === 0 ? (
-              <p className="text-gray-400 text-sm">Aucun fichier uploadé</p>
+              <div className="p-12 text-center">
+                <p className="text-sm text-gray-400">Aucun fichier uploadé sur cette source</p>
+              </div>
             ) : (
-              <div className="space-y-3">
+              <div className="divide-y divide-gray-50">
                 {fichiers.map((fichier) => (
-                  <div
-                    key={fichier.id}
-                    className="flex justify-between items-center border rounded-md p-4"
-                  >
+                  <div key={fichier.id} className="flex justify-between items-center px-6 py-4 hover:bg-gray-50 transition-colors">
                     <div>
-                      <p className="font-medium text-gray-900">{fichier.nom}</p>
-                      <p className="text-xs text-gray-400">
-                        {fichier.taille?.toFixed(2)} MB ·{" "}
-                        {new Date(fichier.createdAt).toLocaleDateString("fr-FR")}
-                      </p>
-                      {fichier.rapport && (
-                        <p className="text-xs text-gray-500 mt-1">
-                          {fichier.rapport.totalLignes} lignes ·{" "}
-                          <span className="text-green-600">{fichier.rapport.lignesValides} valides</span>
-                          {" · "}
-                          <span className="text-red-600">{fichier.rapport.lignesInvalides} invalides</span>
-                        </p>
-                      )}
+                      <p className="text-sm font-medium text-gray-900">{fichier.nom}</p>
+                      <div className="flex items-center gap-3 mt-1">
+                        <span className="text-xs text-gray-400">
+                          {fichier.taille?.toFixed(2)} MB
+                        </span>
+                        <span className="text-xs text-gray-300">·</span>
+                        <span className="text-xs text-gray-400">
+                          {new Date(fichier.createdAt).toLocaleDateString("fr-FR")}
+                        </span>
+                        {fichier.rapport && (
+                          <>
+                            <span className="text-xs text-gray-300">·</span>
+                            <span className="text-xs" style={{ color: "#16A34A" }}>
+                              {fichier.rapport.lignesValides} valides
+                            </span>
+                            <span className="text-xs text-gray-300">·</span>
+                            <span className="text-xs" style={{ color: "#DC2626" }}>
+                              {fichier.rapport.lignesInvalides} invalides
+                            </span>
+                          </>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center gap-3">
                       {getStatutBadge(fichier.statut)}
                       <Link
                         href={`/fichiers/${fichier.id}`}
-                        className="text-blue-600 hover:underline text-sm"
+                        className="flex items-center gap-1 text-xs font-medium transition-colors"
+                        style={{ color: "#2563EB" }}
                       >
-                        Voir rapport →
+                        Rapport
+                        <ChevronRight size={13} />
                       </Link>
                     </div>
                   </div>

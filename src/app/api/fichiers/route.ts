@@ -69,15 +69,13 @@ async function validerEnArrierePlan(
   source: any
 ) {
   try {
-    // Mettre le statut en "processing"
-    await prisma.fichier.update({
-      where: { id: fichierId },
-      data: { statut: "processing" },
-    });
 // Lire le contenu du fichier
-const contenu = await file.text();
+const contenuBrut = await file.text();
 console.log("Séparateur utilisé:", source.separateur);
-console.log("Premières lignes:", contenu.substring(0, 200));
+console.log("Premières lignes:", contenuBrut.substring(0, 200));
+
+// Nettoyer le contenu — supprimer les caractères nuls
+const contenu = contenuBrut.replace(/\0/g, "");
 
 // Sauvegarder le contenu
 await prisma.fichier.update({
@@ -85,9 +83,8 @@ await prisma.fichier.update({
   data: { contenu },
 });
 
-    // Valider le fichier
-    const resultat = validerFichierCSV(contenu, source.colonnes, source.separateur);
-
+// Valider le fichier
+const resultat = validerFichierCSV(contenu, source.colonnes, source.separateur);
     // Déterminer le statut final
     let statut = "success";
     if (resultat.lignesInvalides > 0 && resultat.lignesValides === 0) {
