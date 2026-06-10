@@ -44,11 +44,7 @@ export default function NewSourcePage() {
     setColonnes(colonnes.filter((_, i) => i !== index));
   };
 
-  const modifierColonne = (
-    index: number,
-    champ: string,
-    valeur: any
-  ) => {
+  const modifierColonne = (index: number, champ: string, valeur: any) => {
     const nouvelles = [...colonnes];
     nouvelles[index] = {
       ...nouvelles[index],
@@ -95,7 +91,7 @@ export default function NewSourcePage() {
   return (
     <AppLayout>
       <div className="min-h-screen bg-gray-50 p-8">
-        <div className="max-w-3xl mx-auto">
+        <div className="max-w-3xl mx-auto text-gray-900">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Nouvelle source
           </h1>
@@ -112,7 +108,7 @@ export default function NewSourcePage() {
 
           {/* Informations générales */}
           <div className="bg-white rounded-lg border p-6 mb-6">
-            <h2 className="text-lg font-semibold mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
               Informations générales
             </h2>
 
@@ -121,12 +117,11 @@ export default function NewSourcePage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Nom de la source *
                 </label>
-
                 <input
                   type="text"
                   value={nom}
                   onChange={(e) => setNom(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Ex: Ventes Orange CI - Hebdo"
                 />
               </div>
@@ -135,11 +130,10 @@ export default function NewSourcePage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Description
                 </label>
-
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   rows={2}
                   placeholder="Description de la source"
                 />
@@ -149,11 +143,10 @@ export default function NewSourcePage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Séparateur CSV
                 </label>
-
                 <select
                   value={separateur}
                   onChange={(e) => setSeparateur(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value=",">Virgule (,)</option>
                   <option value=";">Point-virgule (;)</option>
@@ -167,10 +160,9 @@ export default function NewSourcePage() {
           {/* Schéma */}
           <div className="bg-white rounded-lg border p-6 mb-6">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold">
+              <h2 className="text-lg font-semibold text-gray-900">
                 Colonnes du schéma
               </h2>
-
               <button
                 onClick={ajouterColonne}
                 className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
@@ -190,7 +182,58 @@ export default function NewSourcePage() {
                     key={index}
                     className="border rounded-md p-4 bg-gray-50"
                   >
-                    {/* Le reste de ton code des colonnes reste inchangé */}
+                    <div className="grid grid-cols-2 gap-4 mb-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Nom de la colonne
+                        </label>
+                        <input
+                          type="text"
+                          value={col.nom}
+                          onChange={(e) =>
+                            modifierColonne(index, "nom", e.target.value)
+                          }
+                          className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="Ex: date_vente"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Type
+                        </label>
+                        <select
+                          value={col.type}
+                          onChange={(e) =>
+                            modifierColonne(index, "type", e.target.value)
+                          }
+                          className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="string">Texte (string)</option>
+                          <option value="number">Nombre (number)</option>
+                          <option value="date">Date</option>
+                          <option value="boolean">Booléen</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 mb-3">
+                      <input
+                        type="checkbox"
+                        id={`obligatoire-${index}`}
+                        checked={col.obligatoire}
+                        onChange={(e) =>
+                          modifierColonne(index, "obligatoire", e.target.checked)
+                        }
+                        className="h-4 w-4 text-blue-600"
+                      />
+                      <label
+                        htmlFor={`obligatoire-${index}`}
+                        className="text-sm text-gray-700"
+                      >
+                        Champ obligatoire
+                      </label>
+                    </div>
 
                     <button
                       onClick={() => supprimerColonne(index)}
