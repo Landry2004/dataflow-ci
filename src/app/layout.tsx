@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
+import Providers from "@/components/providers";
 
 const geist = Geist({ subsets: ["latin"] });
 
@@ -17,7 +18,7 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <body className={geist.className}>
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

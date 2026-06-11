@@ -155,6 +155,7 @@ async function validerEnArrierePlan(
       });
     }
 
+    // Mettre à jour le statut et lier à la version du schéma
     await prisma.fichier.update({
       where: { id: fichierId },
       data: {
@@ -162,6 +163,30 @@ async function validerEnArrierePlan(
         schemaVersionId: versionActive?.id ?? null,
       },
     });
+
+    // Créer la notification
+    const fichierInfo = await prisma.fichier.findUnique({
+      where: { id: fichierId },
+      select: { nom: true, uploadePar: true },
+    });
+
+    if (fichierInfo) {
+      const messageStatut =
+        statut === "success"
+          ? `✅ "${fichierInfo.nom}" — ${resultat.lignesValides} lignes valides`
+          : statut === "partial"
+          ? `⚠️ "${fichierInfo.nom}" — ${resultat.lignesValides} valides, ${resultat.lignesInvalides} invalides`
+          : `❌ "${fichierInfo.nom}" — validation échouée`;
+
+      await prisma.notification.create({
+        data: {
+          message: messageStatut,
+          lue: false,
+          userId: fichierInfo.uploadePar,
+          fichierId,
+        },
+      });
+    }
   } catch (error) {
     console.error("Erreur validation:", error);
     await prisma.fichier.update({
