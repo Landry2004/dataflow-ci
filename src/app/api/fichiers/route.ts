@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { validerFichierCSV, RegleColonne } from "@/lib/validation/validator";
+import { parseExcel } from "@/lib/parsers/excel";
 import type { Source, SchemaColonne } from "@prisma/client";
 
 type SourceAvecColonnes = Source & {
@@ -22,6 +23,12 @@ const mapColonne = (c: SchemaColonne): RegleColonne => ({
   formatRegex: c.formatRegex ?? undefined,
   pasDansLeFutur: c.pasDansLeFutur,
 });
+
+const isExcel = (file: File): boolean =>
+  file.name.endsWith(".xlsx") ||
+  file.name.endsWith(".xls") ||
+  file.type ===
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
 export async function POST(request: Request) {
   try {
@@ -99,7 +106,15 @@ async function validerEnArrierePlan(
       data: { statut: "processing" },
     });
 
-    const contenuBrut = await file.text();
+    // Lire le contenu selon le type de fichier
+    let contenuBrut: string;
+    if (isExcel(file)) {
+      const buffer = await file.arrayBuffer();
+     contenuBrut = parseExcel(buffer, source.separateur);
+    } else {
+      contenuBrut = await file.text();
+    }
+
     console.log("Séparateur utilisé:", source.separateur);
     console.log("Premières lignes:", contenuBrut.substring(0, 200));
 
