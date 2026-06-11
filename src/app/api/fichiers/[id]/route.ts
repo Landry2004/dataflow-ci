@@ -28,12 +28,17 @@ export async function GET(
         schemaVersion: true,
       },
     });
+
     if (!fichier) {
-      return NextResponse.json({ error: "Fichier introuvable" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Fichier introuvable" },
+        { status: 404 }
+      );
     }
 
     return NextResponse.json(fichier);
   } catch (error) {
+    console.error("Erreur GET /api/fichiers/[id]:", error);
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
 }

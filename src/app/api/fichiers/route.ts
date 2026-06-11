@@ -1,7 +1,27 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { validerFichierCSV } from "@/lib/validation/validator";
+import { validerFichierCSV, RegleColonne } from "@/lib/validation/validator";
+import type { Source, SchemaColonne } from "@prisma/client";
+
+type SourceAvecColonnes = Source & {
+  colonnes: SchemaColonne[];
+};
+
+// Convertit une SchemaColonne Prisma (null) en RegleColonne (undefined)
+const mapColonne = (c: SchemaColonne): RegleColonne => ({
+  nom: c.nom,
+  type: c.type,
+  obligatoire: c.obligatoire,
+  formatDate: c.formatDate ?? undefined,
+  valeurMin: c.valeurMin ?? undefined,
+  valeurMax: c.valeurMax ?? undefined,
+  longueurMin: c.longueurMin ?? undefined,
+  longueurMax: c.longueurMax ?? undefined,
+  valeursAutorisees: c.valeursAutorisees,
+  formatRegex: c.formatRegex ?? undefined,
+  pasDansLeFutur: c.pasDansLeFutur,
+});
 
 export async function POST(request: Request) {
   try {
@@ -21,7 +41,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Vérifier la taille (10MB max)
     if (file.size > 10 * 1024 * 1024) {
       return NextResponse.json(
         { error: "Fichier trop volumineux (max 10MB)" },
@@ -30,30 +49,33 @@ export async function POST(request: Request) {
     }
 
     const source = await prisma.source.findUnique({
-  where: { id: Number(sourceId) },
-  include: {
-    colonnes: {
-      where: { schemaVersionId: null }
-    }
-  },
-});
+      where: { id: Number(sourceId) },
+      include: {
+        colonnes: {
+          where: { schemaVersionId: null },
+        },
+      },
+    });
+
     if (!source) {
-      return NextResponse.json({ error: "Source introuvable" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Source introuvable" },
+        { status: 404 }
+      );
     }
 
-    // Créer le fichier en base avec statut "pending"
     const fichier = await prisma.fichier.create({
       data: {
         nom: file.name,
         taille: file.size / 1024 / 1024,
         statut: "pending",
         sourceId: source.id,
-        organisationId: (session.user as any).organisationId,
-        uploadePar: Number((session.user as any).id),
+        organisationId: (session.user as { organisationId: number })
+          .organisationId,
+        uploadePar: Number((session.user as { id: string }).id),
       },
     });
 
-    // Lancer la validation en arrière-plan
     validerEnArrierePlan(fichier.id, file, source);
 
     return NextResponse.json({
@@ -61,6 +83,7 @@ export async function POST(request: Request) {
       fichierId: fichier.id,
     });
   } catch (error) {
+    console.error("Erreur POST /api/fichiers:", error);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }
@@ -68,45 +91,42 @@ export async function POST(request: Request) {
 async function validerEnArrierePlan(
   fichierId: number,
   file: File,
-  source: any
+  source: SourceAvecColonnes
 ) {
   try {
-    // Mettre le statut en "processing"
     await prisma.fichier.update({
       where: { id: fichierId },
       data: { statut: "processing" },
     });
 
-    // Lire le contenu du fichier
     const contenuBrut = await file.text();
     console.log("Séparateur utilisé:", source.separateur);
     console.log("Premières lignes:", contenuBrut.substring(0, 200));
 
-    // Nettoyer le contenu
     const contenu = contenuBrut.replace(/\0/g, "");
 
-    // Sauvegarder le contenu
     await prisma.fichier.update({
       where: { id: fichierId },
       data: { contenu },
     });
 
-    // Récupérer la version active du schéma
     const versionActive = await prisma.schemaVersion.findFirst({
       where: { sourceId: source.id, actif: true },
       include: { colonnes: true },
       orderBy: { version: "desc" },
     });
 
-    // Utiliser les colonnes de la version active ou les colonnes originales
-    const colonnesActives = versionActive?.colonnes?.length > 0
-      ? versionActive.colonnes
-      : source.colonnes;
+    const colonnesActives: RegleColonne[] =
+      versionActive?.colonnes && versionActive.colonnes.length > 0
+        ? versionActive.colonnes.map(mapColonne)
+        : source.colonnes.map(mapColonne);
 
-    // Valider le fichier
-    const resultat = validerFichierCSV(contenu, colonnesActives, source.separateur);
+    const resultat = validerFichierCSV(
+      contenu,
+      colonnesActives,
+      source.separateur
+    );
 
-    // Déterminer le statut final
     let statut = "success";
     if (resultat.lignesInvalides > 0 && resultat.lignesValides === 0) {
       statut = "failed";
@@ -114,7 +134,6 @@ async function validerEnArrierePlan(
       statut = "partial";
     }
 
-    // Créer le rapport
     const rapport = await prisma.rapport.create({
       data: {
         totalLignes: resultat.totalLignes,
@@ -124,7 +143,6 @@ async function validerEnArrierePlan(
       },
     });
 
-    // Créer les erreurs
     if (resultat.erreurs.length > 0) {
       await prisma.erreur.createMany({
         data: resultat.erreurs.map((e) => ({
@@ -137,15 +155,13 @@ async function validerEnArrierePlan(
       });
     }
 
-    // Mettre à jour le statut et lier à la version du schéma
     await prisma.fichier.update({
       where: { id: fichierId },
       data: {
         statut,
-        schemaVersionId: versionActive?.id || null,
+        schemaVersionId: versionActive?.id ?? null,
       },
     });
-
   } catch (error) {
     console.error("Erreur validation:", error);
     await prisma.fichier.update({
@@ -167,7 +183,8 @@ export async function GET(request: Request) {
 
     const fichiers = await prisma.fichier.findMany({
       where: {
-        organisationId: (session.user as any).organisationId,
+        organisationId: (session.user as { organisationId: number })
+          .organisationId,
         ...(sourceId ? { sourceId: Number(sourceId) } : {}),
       },
       include: {
@@ -178,6 +195,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(fichiers);
   } catch (error) {
+    console.error("Erreur GET /api/fichiers:", error);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }

@@ -2,6 +2,25 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 
+type ColonneJSON = {
+  name: string;
+  type: string;
+  required?: boolean;
+  format?: string;
+  min?: number;
+  max?: number;
+  min_length?: number;
+  max_length?: number;
+  allowed_values?: string[];
+  pattern?: string;
+  description?: string;
+};
+
+type ContrainteJSON = {
+  name: string;
+  description?: string;
+};
+
 export async function POST(request: Request) {
   try {
     const session = await auth();
@@ -23,11 +42,18 @@ export async function POST(request: Request) {
         separateur: body.delimiter || ",",
         encodage: body.encoding || "utf-8",
         hasHeader: body.has_header ?? true,
-        organisationId: (session.user as any).organisationId,
+        organisationId: session.user.organisationId,
         colonnes: {
-          create: body.schema.columns.map((col: any) => ({
+          create: body.schema.columns.map((col: ColonneJSON) => ({
             nom: col.name,
-            type: col.type === "enum" ? "enum" : col.type === "integer" ? "integer" : col.type === "date" ? "date" : "string",
+            type:
+              col.type === "enum"
+                ? "enum"
+                : col.type === "integer"
+                ? "integer"
+                : col.type === "date"
+                ? "date"
+                : "string",
             obligatoire: col.required ?? true,
             formatDate: col.format || null,
             valeurMin: col.min ?? null,
@@ -36,17 +62,23 @@ export async function POST(request: Request) {
             longueurMax: col.max_length ?? null,
             valeursAutorisees: col.allowed_values || [],
             formatRegex: col.pattern || null,
-            pasDansLeFutur: col.description?.includes("futur") || col.description?.includes("future") || false,
+            pasDansLeFutur:
+              col.description?.includes("futur") ||
+              col.description?.includes("future") ||
+              false,
             description: col.description || null,
           })),
         },
         contraintesLignes: {
-          create: (body.schema.row_constraints || []).map((rc: any) => ({
-            nom: rc.name,
-            description: rc.description || "",
-            colonnes: rc.description?.match(/\(([^)]+)\)/)?.[1]?.split(", ") || [],
-            type: rc.name.includes("unique") ? "unique" : "date_order",
-          })),
+          create: (body.schema.row_constraints || []).map(
+            (rc: ContrainteJSON) => ({
+              nom: rc.name,
+              description: rc.description || "",
+              colonnes:
+                rc.description?.match(/\(([^)]+)\)/)?.[1]?.split(", ") || [],
+              type: rc.name.includes("unique") ? "unique" : "date_order",
+            })
+          ),
         },
       },
       include: { colonnes: true },
@@ -54,7 +86,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(source, { status: 201 });
   } catch (error) {
-    console.error(error);
+    console.error("Erreur POST /api/sources/import:", error);
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
 }
